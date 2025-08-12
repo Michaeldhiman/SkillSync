@@ -1,24 +1,16 @@
-import UserList from './components/UserList'
+
 import Home from './pages/Home'
 import Signup from './pages/Signup'
 import Login from './pages/Login'
 import Profile from './pages/Profile'
 import ProtectedRoute from './components/ProtectedRoute'
-import { Link,Route,Routes,Navigate } from 'react-router-dom'
-
+import { Route,Routes,Navigate } from 'react-router-dom'
 
 function App() {
-
-
   return (
-    <>
-       <nav className="p-4 border-b">
-        <Link className="mr-4" to="/">Home</Link>
-        <Link className="mr-4" to="/signup">Signup</Link>
-        <Link className="mr-4" to="/login">Login</Link>
-        <Link to="/profile">Profile</Link>
-      </nav>
-      <main className="p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      {/* Main Content Area */}
+      <main>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/signup" element={<Signup />} />
@@ -34,7 +26,7 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
-    </>
+    </div>
   )
 }
 
