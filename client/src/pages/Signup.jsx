@@ -29,10 +29,13 @@ export default function Signup() {
         throw new Error(data.message || "Signup failed");
       }
 
+      // Store token and user data
+      localStorage.setItem("token", data.token);
+      
       // Show success message with better UX
       setError(""); // Clear any previous errors
-      // You could add a success state here instead of alert
-      navigate("/login");
+      // After successful signup, redirect to profile setup
+      navigate("/profile-setup");
     } catch (err) {
       setError(err.message);
     } finally {

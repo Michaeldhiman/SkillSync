@@ -6,6 +6,15 @@ const userSchema = mongoose.Schema(
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
+    skills: [{ type: String }],
+    goals: [{ type: String }],
+    mode: { 
+      type: String, 
+      enum: ['Online', 'Offline', 'Hybrid'], 
+      default: 'Online' 
+    },
+    availability: { type: String },
+    profilePicture: { type: String },
   },
   { timestamps: true }
 )

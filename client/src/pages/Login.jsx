@@ -34,7 +34,15 @@ export default function Login() {
       }
 
       localStorage.setItem("token", data.token);
-      navigate("/profile");
+      
+      // Check if user has completed profile (has skills, goals, etc.)
+      if (data.skills && data.skills.length > 0 || data.goals && data.goals.length > 0) {
+        // User has skills or goals, redirect to profile page
+        navigate("/profile");
+      } else {
+        // User has no skills or goals, redirect to profile setup
+        navigate("/profile-setup");
+      }
     } catch (err) {
       setError(err.message || "Something went wrong");
     } finally {

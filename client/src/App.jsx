@@ -3,6 +3,7 @@ import Home from './pages/Home'
 import Signup from './pages/Signup'
 import Login from './pages/Login'
 import Profile from './pages/Profile'
+import ProfileSetup from './pages/ProfileSetup'
 import ProtectedRoute from './components/ProtectedRoute'
 import { Route,Routes,Navigate } from 'react-router-dom'
 
@@ -20,6 +21,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile-setup"
+            element={
+              <ProtectedRoute>
+                <ProfileSetup />
               </ProtectedRoute>
             }
           />

@@ -1,19 +1,32 @@
 import express from "express";
-
 import cors from "cors";
 import { configDotenv } from "dotenv";
 import connectDb from "./config/db.js";
 import UserRoutes from './routes/UserRoutes.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
 configDotenv({debug:true});
 connectDb();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Get __dirname equivalent for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 app.use(cors({
     origin: 'http://localhost:5173'
 }));
+
+// Middleware for parsing JSON and form data
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Serve static files from uploads directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 app.use('/api/users',UserRoutes);
 
 app.get('/',(req,res)=>{
@@ -21,6 +34,5 @@ app.get('/',(req,res)=>{
 })
 
 app.listen(PORT,()=>{
-    // console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`)
     console.log(`Server is running at http://localhost:${PORT}`);
 })
