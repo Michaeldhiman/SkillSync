@@ -111,17 +111,7 @@ export default function ProfileForm({ user, onProfileUpdate, isEditing = false }
         submitData.append("profilePicture", formData.profilePicture);
       }
 
-      console.log("Submitting form data:", {
-        name: formData.name,
-        skills: formData.skills,
-        goals: formData.goals,
-        mode: formData.mode,
-        availability: formData.availability,
-        hasProfilePicture: formData.profilePicture instanceof File
-      });
-
-      console.log("Making request to:", "http://localhost:5000/api/users/profile/update");
-      console.log("Token:", token ? "Present" : "Missing");
+      
       
       const response = await fetch("http://localhost:5000/api/users/profile/update", {
         method: "POST",
@@ -132,7 +122,7 @@ export default function ProfileForm({ user, onProfileUpdate, isEditing = false }
         body: submitData
       });
 
-      console.log("Response status:", response.status);
+      
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: "Unknown error" }));
@@ -140,7 +130,7 @@ export default function ProfileForm({ user, onProfileUpdate, isEditing = false }
       }
       
       const data = await response.json();
-      console.log("Response data:", data);
+      
 
       setSuccess("Profile updated successfully!");
       

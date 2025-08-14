@@ -23,7 +23,7 @@ export default function ProfileSetup() {
         });
 
         if (!response.ok) {
-          console.log("Not authorized or error fetching profile");
+          
           localStorage.removeItem("token");
           navigate("/");
           return;

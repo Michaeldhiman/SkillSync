@@ -1,6 +1,6 @@
 import express from 'express'
 import multer from 'multer'
-import { getUsers, registerUser, authUser, updateProfile } from '../controllers/userController.js'
+import { getUsers, registerUser, authUser, updateProfile, getMatchSuggestions } from '../controllers/userController.js'
 import { protect } from '../middleware/authMiddleware.js'
 
 const router = express.Router()
@@ -43,5 +43,8 @@ router.get('/profile', protect, (req, res) => {
 
 // Profile update route with file upload support
 router.post('/profile/update', protect, upload.single('profilePicture'), updateProfile)
+
+// Matchmaking route
+router.get('/match-suggestions', protect, getMatchSuggestions)
 
 export default router
