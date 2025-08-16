@@ -3,10 +3,11 @@ import cors from "cors";
 import { configDotenv } from "dotenv";
 import connectDb from "./config/db.js";
 import UserRoutes from './routes/UserRoutes.js';
+import ConnectionRoutes from './routes/ConnectionRoutes.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-configDotenv({debug:true});
+configDotenv();
 connectDb();
 
 const app = express();
@@ -28,6 +29,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use('/api/users',UserRoutes);
+app.use('/api',ConnectionRoutes);
 
 app.get('/',(req,res)=>{
     res.send('API is running...')

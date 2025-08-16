@@ -8,6 +8,8 @@ function Profile() {
   const [suggestions, setSuggestions] = useState([]);
   const [goalFilter, setGoalFilter] = useState("");
   const [showProfileForm, setShowProfileForm] = useState(false);
+  const [sendingRequests, setSendingRequests] = useState(new Set());
+  const [requestStatus, setRequestStatus] = useState({});
   const navigate = useNavigate();
 
   // Simple normalization + synonyms for matching goal filter
@@ -33,8 +35,8 @@ function Profile() {
   const filteredSuggestions = useMemo(() => {
     if (!selectedGoalTokens) return suggestions;
     return suggestions.filter((s) =>
-      Array.isArray(s.overlappingGoals) &&
-      s.overlappingGoals.some((g) => selectedGoalTokens.has(normalize(g)))
+      Array.isArray(s.goals) &&
+      s.goals.some((g) => selectedGoalTokens.has(normalize(g)))
     );
   }, [suggestions, selectedGoalTokens]);
 
@@ -110,6 +112,68 @@ function Profile() {
   const handleProfileUpdate = (updatedUser) => {
     setUser(updatedUser);
     setShowProfileForm(false);
+  };
+
+  // Send connection request
+  const sendConnectionRequest = async (toUserId, toUserName) => {
+    const token = localStorage.getItem("token");
+    if (!token || !user || !user._id || !toUserId) {
+      console.error('Missing required data:', { token: !!token, user: !!user, userId: user?._id, toUserId });
+      return;
+    }
+
+    setSendingRequests(prev => new Set(prev).add(toUserId));
+    
+    try {
+      console.log('Sending connection request:', { fromUserId: user._id, toUserId });
+      
+      const response = await fetch("http://localhost:5000/api/connect-request", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          fromUserId: user._id,
+          toUserId: toUserId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setRequestStatus(prev => ({
+          ...prev,
+          [toUserId]: { type: 'success', message: `Connection request sent to ${toUserName}!` }
+        }));
+        
+        // Clear success message after 3 seconds
+        setTimeout(() => {
+          setRequestStatus(prev => {
+            const newStatus = { ...prev };
+            delete newStatus[toUserId];
+            return newStatus;
+          });
+        }, 3000);
+      } else {
+        setRequestStatus(prev => ({
+          ...prev,
+          [toUserId]: { type: 'error', message: data.message || 'Failed to send request' }
+        }));
+      }
+    } catch (error) {
+      console.error("Error sending connection request:", error);
+      setRequestStatus(prev => ({
+        ...prev,
+        [toUserId]: { type: 'error', message: 'Network error. Please try again.' }
+      }));
+    } finally {
+      setSendingRequests(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(toUserId);
+        return newSet;
+      });
+    }
   };
 
   if (loading) {
@@ -443,7 +507,10 @@ function Profile() {
                   </svg>
                 </button>
 
-                <button className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg hover:from-green-100 hover:to-blue-100 transition-all duration-200 group">
+                <button
+                  onClick={() => navigate('/connection-requests')}
+                  className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg hover:from-green-100 hover:to-blue-100 transition-all duration-200 group"
+                >
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
                       <svg
@@ -456,21 +523,65 @@ function Profile() {
                           strokeLinecap="round"
                           strokeLinejoin="round"
                           strokeWidth={2}
-                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                          d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
                         />
                       </svg>
                     </div>
                     <div className="text-left">
                       <div className="font-medium text-gray-900">
-                        Create Project
+                        Connection Requests
                       </div>
                       <div className="text-sm text-gray-600">
-                        Start building something amazing
+                        View and manage your requests
                       </div>
                     </div>
                   </div>
                   <svg
                     className="w-5 h-5 text-gray-400 group-hover:text-green-500 transition-colors duration-200"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </button>
+
+                <button
+                  onClick={() => navigate('/connections')}
+                  className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg hover:from-purple-100 hover:to-pink-100 transition-all duration-200 group"
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center">
+                      <svg
+                        className="w-5 h-5 text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"
+                        />
+                      </svg>
+                    </div>
+                    <div className="text-left">
+                      <div className="font-medium text-gray-900">
+                        My Connections
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        View your connected users
+                      </div>
+                    </div>
+                  </div>
+                  <svg
+                    className="w-5 h-5 text-gray-400 group-hover:text-purple-500 transition-colors duration-200"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -629,41 +740,98 @@ function Profile() {
                         </div>
                       </div>
 
-                      {s.overlappingSkills?.length > 0 && (
-                        <div className="mt-4">
-                          <div className="text-sm text-gray-500 mb-2">
-                            Shared Skills
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {s.overlappingSkills.map((sk, idx) => (
-                              <span
-                                key={idx}
-                                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                              >
-                                {sk}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
 
-                      {s.overlappingGoals?.length > 0 && (
-                        <div className="mt-3">
-                          <div className="text-sm text-gray-500 mb-2">
-                            Shared Goals
+                      {/* Display skills and goals */}
+                      <div className="mt-4 space-y-3">
+                        {s.skills && s.skills.length > 0 && (
+                          <div>
+                            <div className="text-sm text-gray-500 mb-2">Skills</div>
+                            <div className="flex flex-wrap gap-2">
+                              {s.skills.slice(0, 3).map((skill, idx) => (
+                                <span
+                                  key={idx}
+                                  className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                                >
+                                  {skill}
+                                </span>
+                              ))}
+                              {s.skills.length > 3 && (
+                                <span className="text-xs text-gray-500">
+                                  +{s.skills.length - 3} more
+                                </span>
+                              )}
+                            </div>
                           </div>
-                          <div className="flex flex-wrap gap-2">
-                            {s.overlappingGoals.map((gl, idx) => (
-                              <span
-                                key={idx}
-                                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800"
-                              >
-                                {gl}
-                              </span>
-                            ))}
+                        )}
+
+                        {s.goals && s.goals.length > 0 && (
+                          <div>
+                            <div className="text-sm text-gray-500 mb-2">Learning Goals</div>
+                            <div className="flex flex-wrap gap-2">
+                              {s.goals.slice(0, 3).map((goal, idx) => (
+                                <span
+                                  key={idx}
+                                  className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                                >
+                                  {goal}
+                                </span>
+                              ))}
+                              {s.goals.length > 3 && (
+                                <span className="text-xs text-gray-500">
+                                  +{s.goals.length - 3} more
+                                </span>
+                              )}
+                            </div>
                           </div>
+                        )}
+                      </div>
+
+                      {/* Match Score */}
+                      <div className="mt-4 flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm font-medium text-gray-600">Match Score:</span>
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800">
+                            {s.matchScore}
+                          </span>
                         </div>
-                      )}
+                      </div>
+
+                      {/* Connection Request Button */}
+                      <div className="mt-4 pt-4 border-t border-gray-100">
+                        {requestStatus[s._id] ? (
+                          <div className={`p-3 rounded-lg text-sm ${
+                            requestStatus[s._id].type === 'success' 
+                              ? 'bg-green-50 text-green-700 border border-green-200' 
+                              : 'bg-red-50 text-red-700 border border-red-200'
+                          }`}>
+                            {requestStatus[s._id].message}
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => sendConnectionRequest(s._id, s.name)}
+                            disabled={sendingRequests.has(s._id)}
+                            className={`w-full px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                              sendingRequests.has(s._id)
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                : 'bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 shadow-lg hover:shadow-xl transform hover:scale-105'
+                            }`}
+                          >
+                            {sendingRequests.has(s._id) ? (
+                              <div className="flex items-center justify-center space-x-2">
+                                <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                                <span>Sending...</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-center space-x-2">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                </svg>
+                                <span>Send Request</span>
+                              </div>
+                            )}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>

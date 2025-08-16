@@ -4,6 +4,8 @@ import Signup from './pages/Signup'
 import Login from './pages/Login'
 import Profile from './pages/Profile'
 import ProfileSetup from './pages/ProfileSetup'
+import ConnectionRequests from './pages/ConnectionRequests'
+import Connections from './pages/Connections'
 import ProtectedRoute from './components/ProtectedRoute'
 import { Route,Routes,Navigate } from 'react-router-dom'
 
@@ -29,6 +31,22 @@ function App() {
             element={
               <ProtectedRoute>
                 <ProfileSetup />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/connection-requests"
+            element={
+              <ProtectedRoute>
+                <ConnectionRequests />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/connections"
+            element={
+              <ProtectedRoute>
+                <Connections />
               </ProtectedRoute>
             }
           />

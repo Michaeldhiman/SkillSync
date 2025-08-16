@@ -15,53 +15,84 @@ const getUsers = async (req, res) => {
 
 // Register new user
 const registerUser = async (req, res) => {
-  const { name, email, password } = req.body
+  try {
+    const { name, email, password } = req.body
 
-  const userExists = await User.findOne({ email })
-  if (userExists) {
-    return res.status(400).json({ message: 'User already exists' })
-  }
+    // Input validation
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: 'Please provide name, email, and password' })
+    }
 
-  const user = await User.create({ name, email, password })
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ message: 'Please provide a valid email address' })
+    }
 
-  if (user) {
-    res.status(201).json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      skills: user.skills || [],
-      goals: user.goals || [],
-      mode: user.mode || 'Online',
-      availability: user.availability || '',
-      profilePicture: user.profilePicture || null,
-      token: generateToken(user._id),
-    })
-  } else {
-    res.status(400).json({ message: 'Invalid user data' })
+    // Password validation
+    if (password.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters long' })
+    }
+
+    const userExists = await User.findOne({ email })
+    if (userExists) {
+      return res.status(400).json({ message: 'User already exists' })
+    }
+
+    const user = await User.create({ name, email, password })
+
+    if (user) {
+      res.status(201).json({
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        skills: user.skills || [],
+        goals: user.goals || [],
+        mode: user.mode || 'Online',
+        availability: user.availability || '',
+        profilePicture: user.profilePicture || null,
+        token: generateToken(user._id),
+      })
+    } else {
+      res.status(400).json({ message: 'Invalid user data' })
+    }
+  } catch (error) {
+    console.error('Registration error:', error)
+    res.status(500).json({ message: 'Server error during registration' })
   }
 }
 
 // Login user
 const authUser = async (req, res) => {
-  const { email, password } = req.body
+  try {
+    const { email, password } = req.body
 
-  // Check if user exists
-  const user = await User.findOne({ email })
+    // Input validation
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Please provide email and password' })
+    }
 
-  if (user && (await bcrypt.compare(password, user.password))) {
-    res.json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      skills: user.skills || [],
-      goals: user.goals || [],
-      mode: user.mode || 'Online',
-      availability: user.availability || '',
-      profilePicture: user.profilePicture || null,
-      token: generateToken(user._id),
-    })
-  } else {
-    res.status(401).json({ message: 'Invalid email or password' })
+    // Check if user exists
+    const user = await User.findOne({ email })
+
+    if (user && (await bcrypt.compare(password, user.password))) {
+      res.json({
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        skills: user.skills || [],
+        goals: user.goals || [],
+        mode: user.mode || 'Online',
+        availability: user.availability || '',
+        profilePicture: user.profilePicture || null,
+        token: generateToken(user._id),
+      })
+    } else {
+      res.status(401).json({ message: 'Invalid email or password' })
+    }
+  } catch (error) {
+    console.error('Login error:', error)
+    res.status(500).json({ message: 'Server error during login' })
   }
 }
 
@@ -134,109 +165,84 @@ const updateProfile = async (req, res) => {
   }
 };
 
-// Matchmaking: find users with overlapping skills and goals (supports partial matches like "learn typescript" ~ "typescript")
+// Helper function to calculate match score between two users
+function calculateMatchScore(user, otherUser) {
+  let score = 0;
+  
+  // Ensure arrays exist
+  const userSkills = user.skills || [];
+  const userGoals = user.goals || [];
+  const otherSkills = otherUser.skills || [];
+  const otherGoals = otherUser.goals || [];
+  
+  // Complementary skills (what I can teach them + what they can teach me)
+  const teachMe = userGoals.filter(goal => otherSkills.includes(goal));
+  const ICanTeach = userSkills.filter(skill => otherGoals.includes(skill));
+  score += (teachMe.length + ICanTeach.length) * 50;
+  
+  // Shared goals (we want to learn the same things)
+  const commonGoals = userGoals.filter(goal => otherGoals.includes(goal));
+  score += commonGoals.length * 30;
+  
+  // Common skills (we both know these things)
+  const commonSkills = userSkills.filter(skill => otherSkills.includes(skill));
+  score += commonSkills.length * 20;
+  
+  return score;
+}
+
+// Get match suggestions for a user
 const getMatchSuggestions = async (req, res) => {
   try {
-    const currentUser = await User.findById(req.user._id).select('skills goals')
-
-    const normalize = (s) => (s ? String(s).toLowerCase().trim() : '')
-    const tokenize = (s) => normalize(s).split(/[^a-z0-9+#]+/).filter(Boolean)
-    const STOP_WORDS = new Set(['learn', 'learning', 'to', 'the', 'and', 'a', 'an', 'for', 'with', 'in', 'on', 'of', 'about', 'become', 'build', 'improve', 'master'])
-    const TWO_LETTER_TECH = new Set(['go', 'js', 'ai', 'ml', 'ui', 'ux', 'db', 'c'])
-    const filterToken = (t) => t && !STOP_WORDS.has(t) && (t.length >= 3 || TWO_LETTER_TECH.has(t))
-    const SYNONYMS = {
-      golang: ['go'],
-      go: ['golang'],
-      javascript: ['js'],
-      js: ['javascript'],
-      typescript: ['ts'],
-      ts: ['typescript'],
-    }
-    const addSynonyms = (tokensSet) => {
-      const expanded = new Set(tokensSet)
-      for (const t of tokensSet) {
-        const syns = SYNONYMS[t]
-        if (syns) syns.forEach((s) => expanded.add(s))
-      }
-      return expanded
-    }
-    const extractTokensAndJoins = (phrases) => {
-      const tokens = []
-      for (const p of phrases) {
-        const parts = tokenize(p).filter(filterToken)
-        tokens.push(...parts)
-        if (parts.length >= 2) {
-          const joined = parts.join('') // e.g., "go"+"lang" -> "golang"
-          if (filterToken(joined)) tokens.push(joined)
-        }
-      }
-      return addSynonyms(new Set(tokens))
-    }
-    const escapeRegExp = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-
-    const currentSkills = Array.isArray(currentUser?.skills) ? currentUser.skills : []
-    const currentGoals = Array.isArray(currentUser?.goals) ? currentUser.goals : []
-
-    // Build token set from current user's phrases (includes joined forms like "golang")
-    const currentTokens = extractTokensAndJoins([...currentSkills, ...currentGoals])
-
-    if (currentTokens.size === 0 && currentSkills.length === 0 && currentGoals.length === 0) {
-      return res.json({ suggestions: [] })
+    const userId = req.params.userId || req.user._id;
+    
+    // Fetch the current user
+    const currentUser = await User.findById(userId).select('name email skills goals availability mode');
+    
+    if (!currentUser) {
+      return res.status(404).json({ message: 'User not found' });
     }
 
-    // Use regex to find partial matches by token in skills/goals
-    const tokenRegexes = Array.from(currentTokens).map((t) => new RegExp(`\\b${escapeRegExp(t)}\\b`, 'i'))
+    // Query all other users (excluding current user)
+    const otherUsers = await User.find({ 
+      _id: { $ne: userId } 
+    }).select('name email skills goals availability mode');
 
-    const candidates = await User.find({
-      _id: { $ne: req.user._id },
-      $or: [
-        { skills: { $in: tokenRegexes } },
-        { goals: { $in: tokenRegexes } },
-        // Fallback to exact phrase overlap if tokens didn't exist
-        { skills: { $in: currentSkills } },
-        { goals: { $in: currentGoals } },
-      ],
-    }).select('_id name email skills goals mode availability profilePicture')
-
-    const suggestions = candidates
-      .map((candidate) => {
-        const candidateSkills = Array.isArray(candidate.skills) ? candidate.skills : []
-        const candidateGoals = Array.isArray(candidate.goals) ? candidate.goals : []
-
-        const candidateSkillTokens = extractTokensAndJoins(candidateSkills)
-        const candidateGoalTokens = extractTokensAndJoins(candidateGoals)
-
-        // Token overlap
-        const overlappingSkillTokens = Array.from(currentTokens).filter((t) => candidateSkillTokens.has(t))
-        const overlappingGoalTokens = Array.from(currentTokens).filter((t) => candidateGoalTokens.has(t))
-
-        // Exact phrase overlap (bonus)
-        const exactOverlappingSkills = candidateSkills.filter((s) => currentSkills.includes(s))
-        const exactOverlappingGoals = candidateGoals.filter((g) => currentGoals.includes(g))
-
-        const score = overlappingSkillTokens.length * 2 + overlappingGoalTokens.length + exactOverlappingSkills.length * 1 + exactOverlappingGoals.length * 1
-
+    // Calculate match scores and build suggestions array
+    const suggestions = otherUsers
+      .map(otherUser => {
+        const matchScore = calculateMatchScore(currentUser, otherUser);
+        
         return {
-          _id: candidate._id,
-          name: candidate.name,
-          email: candidate.email,
-          mode: candidate.mode,
-          availability: candidate.availability,
-          profilePicture: candidate.profilePicture,
-          // Expose overlapping tokens for UI display
-          overlappingSkills: overlappingSkillTokens,
-          overlappingGoals: overlappingGoalTokens,
-          score,
-        }
+          _id: otherUser._id,
+          name: otherUser.name,
+          email: otherUser.email,
+          skills: otherUser.skills || [],
+          goals: otherUser.goals || [],
+          availability: otherUser.availability,
+          mode: otherUser.mode,
+          matchScore
+        };
       })
-      .filter((s) => s.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 10)
+      .filter(suggestion => suggestion.matchScore > 0) // Only include users with some match
+      .sort((a, b) => b.matchScore - a.matchScore); // Sort by highest score first
 
-    res.json({ suggestions })
+    // Handle case when no matches are found
+    if (suggestions.length === 0) {
+      return res.json({ 
+        message: 'No matches found. Try updating your skills and goals to find more connections.',
+        suggestions: [] 
+      });
+    }
+
+    res.json({ 
+      message: `Found ${suggestions.length} potential matches`,
+      suggestions 
+    });
+
   } catch (error) {
-    console.error('Match suggestions error:', error)
-    res.status(500).json({ message: 'Failed to get match suggestions' })
+    console.error('Match suggestions error:', error);
+    res.status(500).json({ message: 'Failed to get match suggestions' });
   }
 }
 

@@ -31,10 +31,6 @@ userSchema.pre('save', async function (next) {
     this.password = await bcrypt.hash(this.password, salt)
     next()
   })
-//  Method to check if entered password matches hashed password in DB
-userSchema.methods.matchPassword = async function (enteredPassword) {
-    return await bcrypt.compare(enteredPassword, this.password)
-  }
 
 const User = mongoose.model('User', userSchema)
 export default User;

@@ -12,7 +12,8 @@ const storage = multer.diskStorage({
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
-    cb(null, file.fieldname + '-' + uniqueSuffix + '.' + file.originalname.split('.').pop())
+    const extension = file.originalname.split('.').pop() || 'jpg'
+    cb(null, file.fieldname + '-' + uniqueSuffix + '.' + extension)
   }
 })
 
@@ -44,7 +45,8 @@ router.get('/profile', protect, (req, res) => {
 // Profile update route with file upload support
 router.post('/profile/update', protect, upload.single('profilePicture'), updateProfile)
 
-// Matchmaking route
-router.get('/match-suggestions', protect, getMatchSuggestions)
+// Matchmaking routes
+router.get('/match-suggestions/:userId', protect, getMatchSuggestions)  // GET /api/users/match-suggestions/:userId
+router.get('/match-suggestions', protect, getMatchSuggestions)          // GET /api/users/match-suggestions (uses req.user._id)
 
 export default router
