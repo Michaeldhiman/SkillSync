@@ -19,7 +19,7 @@ const __dirname = path.dirname(__filename);
 
 const corsOptions = {
     origin: process.env.NODE_ENV === 'production'
-      ? process.env.CLIENT_URL   // from Render environment variables
+      ? process.env.CLIENT_URL   // Vercel frontend URL
       : 'http://localhost:5173', // local dev
     credentials: true
   };
