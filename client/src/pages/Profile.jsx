@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ProfileForm from "../components/ProfileForm";
 
+
 function Profile() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -50,7 +51,7 @@ function Profile() {
     const fetchProfile = async () => {
       try {
         const response = await fetch(
-          "http://localhost:5000/api/users/profile",
+          `${import.meta.env.VITE_API_URL}/api/users/profile`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -76,7 +77,7 @@ function Profile() {
         }
         try {
           const sugRes = await fetch(
-            "http://localhost:5000/api/users/match-suggestions",
+            `${import.meta.env.VITE_API_URL}/api/users/match-suggestions`,
             {
               headers: { Authorization: `Bearer ${token}` },
             }
@@ -125,7 +126,7 @@ function Profile() {
     setSendingRequests(prev => new Set(prev).add(toUserId));
     
     try {
-      const response = await fetch("http://localhost:5000/api/connect-request", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/connect-request`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

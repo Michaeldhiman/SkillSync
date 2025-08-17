@@ -19,10 +19,10 @@ function ConnectionRequests() {
     const fetchRequests = async () => {
       try {
         const [receivedRes, sentRes] = await Promise.all([
-          fetch("http://localhost:5000/api/requests/received", {
+          fetch(`${import.meta.env.VITE_API_URL}/api/requests/received`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          fetch("http://localhost:5000/api/requests/sent", {
+          fetch(`${import.meta.env.VITE_API_URL}/api/requests/sent`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
@@ -59,7 +59,7 @@ function ConnectionRequests() {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/requests/${connectionId}/respond`,
+        `${import.meta.env.VITE_API_URL}/api/requests/${connectionId}/respond`,
         {
           method: "PUT",
           headers: {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+
 function Connections() {
   const [connections, setConnections] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18,10 +19,10 @@ function Connections() {
       try {
         // Fetch both sent and received requests that are accepted
         const [sentRes, receivedRes] = await Promise.all([
-          fetch("http://localhost:5000/api/requests/sent", {
+          fetch(`${import.meta.env.VITE_API_URL}/api/requests/sent`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          fetch("http://localhost:5000/api/requests/received", {
+          fetch(`${import.meta.env.VITE_API_URL}/api/requests/received`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);

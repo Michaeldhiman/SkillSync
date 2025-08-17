@@ -16,13 +16,14 @@ export default function ProfileSetup() {
 
     const fetchProfile = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/users/profile", {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/profile`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
 
         if (!response.ok) {
+          // If response is not ok, remove token and redirect to login
           
           localStorage.removeItem("token");
           navigate("/");

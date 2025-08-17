@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 
+
 export default function ProfileForm({ user, onProfileUpdate, isEditing = false }) {
   const [formData, setFormData] = useState({
     name: "",
@@ -113,7 +114,7 @@ export default function ProfileForm({ user, onProfileUpdate, isEditing = false }
 
       
       
-      const response = await fetch("http://localhost:5000/api/users/profile/update", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/profile/update`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
