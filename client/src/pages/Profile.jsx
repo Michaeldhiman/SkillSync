@@ -125,8 +125,6 @@ function Profile() {
     setSendingRequests(prev => new Set(prev).add(toUserId));
     
     try {
-      console.log('Sending connection request:', { fromUserId: user._id, toUserId });
-      
       const response = await fetch("http://localhost:5000/api/connect-request", {
         method: "POST",
         headers: {

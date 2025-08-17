@@ -55,7 +55,6 @@ function ConnectionRequests() {
       return;
     }
 
-    console.log(`Processing ${action} for connection:`, connectionId);
     setProcessingRequests(prev => new Set(prev).add(connectionId));
 
     try {
@@ -72,14 +71,12 @@ function ConnectionRequests() {
       );
 
       const data = await response.json();
-      console.log("Response:", data);
 
       if (response.ok) {
         // Remove the request from the list
         setReceivedRequests(prev => 
           prev.filter(req => req._id !== connectionId)
         );
-        console.log(`Successfully ${action}ed connection request`);
       } else {
         console.error("Error responding to request:", data.message);
         alert(`Error: ${data.message}`);

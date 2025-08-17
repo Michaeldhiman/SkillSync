@@ -17,9 +17,15 @@ const PORT = process.env.PORT || 5000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-app.use(cors({
-    origin: 'http://localhost:5173'
-}));
+// Configure CORS for production
+const corsOptions = {
+  origin: process.env.NODE_ENV === 'production' 
+    ? process.env.CLIENT_URL || 'https://your-domain.com'
+    : 'http://localhost:5173',
+  credentials: true
+};
+
+app.use(cors(corsOptions));
 
 // Middleware for parsing JSON and form data
 app.use(express.json());
