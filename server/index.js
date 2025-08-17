@@ -4,13 +4,20 @@ import { configDotenv } from "dotenv";
 import connectDb from "./config/db.js";
 import UserRoutes from './routes/UserRoutes.js';
 import ConnectionRoutes from './routes/ConnectionRoutes.js';
+import StudyRoutes from './routes/StudyRoutes.js';
+import MessageRoutes from './routes/MessageRoutes.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
+import Message from './models/MessageModel.js';
+import authMiddleware from './middleware/authMiddleware.js';
 
 configDotenv();
 connectDb();
 
 const app = express();
+const server = createServer(app);
 const PORT = process.env.PORT || 5000;
 
 // Get __dirname equivalent for ES modules
@@ -24,7 +31,69 @@ const corsOptions = {
     credentials: true
   };
   
-  app.use(cors(corsOptions));
+app.use(cors(corsOptions));
+
+// Socket.IO setup
+const io = new Server(server, {
+  cors: corsOptions
+});
+
+// Socket.IO connection handling
+io.on('connection', (socket) => {
+  console.log('User connected:', socket.id);
+
+  // Join user to their personal room
+  socket.on('join', (userId) => {
+    socket.join(userId);
+    console.log(`User ${userId} joined room`);
+  });
+
+  // Handle sending messages
+  socket.on('send_message', async (data) => {
+    try {
+      const { senderId, receiverId, text } = data;
+      
+      // Save message to database
+      const message = new Message({
+        senderId,
+        receiverId,
+        text
+      });
+      
+      await message.save();
+      
+      // Populate sender info
+      await message.populate('senderId', 'name profilePicture');
+      
+      // Send message to receiver
+      io.to(receiverId).emit('receive_message', message);
+      
+      // Send confirmation to sender
+      socket.emit('message_sent', message);
+      
+    } catch (error) {
+      socket.emit('message_error', { error: error.message });
+    }
+  });
+
+  // Handle marking messages as read
+  socket.on('mark_read', async (data) => {
+    try {
+      const { messageIds } = data;
+      await Message.updateMany(
+        { _id: { $in: messageIds } },
+        { isRead: true }
+      );
+      socket.emit('messages_marked_read', { messageIds });
+    } catch (error) {
+      socket.emit('mark_read_error', { error: error.message });
+    }
+  });
+
+  socket.on('disconnect', () => {
+    console.log('User disconnected:', socket.id);
+  });
+});
 
 // Middleware for parsing JSON and form data
 app.use(express.json());
@@ -35,11 +104,13 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use('/api/users',UserRoutes);
 app.use('/api',ConnectionRoutes);
+app.use('/api/study', StudyRoutes);
+app.use('/api/messages', MessageRoutes);
 
 app.get('/',(req,res)=>{
     res.send('API is running...')
 })
 
-app.listen(PORT,()=>{
+server.listen(PORT,()=>{
     console.log(`Server is running at http://localhost:${PORT}`);
 })

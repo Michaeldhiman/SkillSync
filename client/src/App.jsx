@@ -1,4 +1,3 @@
-
 import Home from './pages/Home'
 import Signup from './pages/Signup'
 import Login from './pages/Login'
@@ -6,6 +5,7 @@ import Profile from './pages/Profile'
 import ProfileSetup from './pages/ProfileSetup'
 import ConnectionRequests from './pages/ConnectionRequests'
 import Connections from './pages/Connections'
+import Dashboard from './pages/Dashboard'
 import ProtectedRoute from './components/ProtectedRoute'
 import { Route,Routes,Navigate } from 'react-router-dom'
 
@@ -18,6 +18,14 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/login" element={<Login />} />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/profile"
             element={

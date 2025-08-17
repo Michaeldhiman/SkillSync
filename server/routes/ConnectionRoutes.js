@@ -5,12 +5,12 @@ import {
   getSentRequests, 
   respondToRequest 
 } from '../controllers/connectionController.js'
-import { protect } from '../middleware/authMiddleware.js'
+import authMiddleware from '../middleware/authMiddleware.js'
 
 const router = express.Router()
 
 // All connection routes require authentication
-router.use(protect)
+router.use(authMiddleware)
 
 // Send connection request
 router.post('/connect-request', sendConnectionRequest)
