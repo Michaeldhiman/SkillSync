@@ -1,5 +1,6 @@
 import Message from '../models/MessageModel.js';
 import User from '../models/UserModel.js';
+import mongoose from 'mongoose';
 
 // Get conversation between two users
 export const getConversation = async (req, res) => {
@@ -55,13 +56,16 @@ export const getUserConversations = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
+    // Convert userId to ObjectId for aggregation
+    const userObjectId = new mongoose.Types.ObjectId(userId);
+
     // Get latest message from each conversation
     const conversations = await Message.aggregate([
       {
         $match: {
           $or: [
-            { senderId: userId },
-            { receiverId: userId }
+            { senderId: userObjectId },
+            { receiverId: userObjectId }
           ]
         }
       },
@@ -72,7 +76,7 @@ export const getUserConversations = async (req, res) => {
         $group: {
           _id: {
             $cond: [
-              { $eq: ['$senderId', userId] },
+              { $eq: ['$senderId', userObjectId] },
               '$receiverId',
               '$senderId'
             ]
@@ -83,7 +87,7 @@ export const getUserConversations = async (req, res) => {
               $cond: [
                 {
                   $and: [
-                    { $eq: ['$receiverId', userId] },
+                    { $eq: ['$receiverId', userObjectId] },
                     { $eq: ['$isRead', false] }
                   ]
                 },

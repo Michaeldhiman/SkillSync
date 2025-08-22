@@ -38,6 +38,9 @@ const io = new Server(server, {
   cors: corsOptions
 });
 
+// Store online users
+const onlineUsers = new Map();
+
 // Socket.IO connection handling
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
@@ -45,7 +48,12 @@ io.on('connection', (socket) => {
   // Join user to their personal room
   socket.on('join', (userId) => {
     socket.join(userId);
-    console.log(`User ${userId} joined room`);
+    socket.userId = userId;
+    onlineUsers.set(userId, socket.id);
+    
+    // Broadcast user online status
+    socket.broadcast.emit('user_online', userId);
+    console.log(`User ${userId} joined room and is now online`);
   });
 
   // Handle sending messages
@@ -90,8 +98,20 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Handle getting online users
+  socket.on('get_online_users', () => {
+    const onlineUserIds = Array.from(onlineUsers.keys());
+    socket.emit('online_users', onlineUserIds);
+  });
+
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
+    if (socket.userId) {
+      onlineUsers.delete(socket.userId);
+      // Broadcast user offline status
+      socket.broadcast.emit('user_offline', socket.userId);
+      console.log(`User ${socket.userId} is now offline`);
+    }
   });
 });
 

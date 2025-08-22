@@ -9,7 +9,11 @@ import ActivityGraph from '../components/ActivityGraph';
 
 const Dashboard = () => {
   const [user, setUser] = useState(null);
-  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(() => {
+    // Restore chat state from localStorage on page load
+    const savedChatState = localStorage.getItem('isChatOpen');
+    return savedChatState === 'true';
+  });
   const [studyData, setStudyData] = useState(null);
   const [streakData, setStreakData] = useState(null);
   const navigate = useNavigate();
@@ -37,6 +41,16 @@ const Dashboard = () => {
       fetchUserProfile(token);
     }
   }, []);
+
+  // Save chat state to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('isChatOpen', isChatOpen.toString());
+  }, [isChatOpen]);
+
+  const handleChatClose = () => {
+    setIsChatOpen(false);
+    localStorage.setItem('isChatOpen', 'false');
+  };
 
   const fetchUserProfile = async (token) => {
     try {
@@ -355,7 +369,7 @@ const Dashboard = () => {
       {isChatOpen && (
         <ChatPanel 
           isOpen={isChatOpen} 
-          onClose={() => setIsChatOpen(false)}
+          onClose={handleChatClose}
           currentUser={user}
         />
       )}

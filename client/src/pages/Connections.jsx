@@ -1,11 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import ChatPanel from "../components/ChatPanel";
 
 
 function Connections() {
   const [connections, setConnections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [selectedConnection, setSelectedConnection] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -17,8 +21,11 @@ function Connections() {
 
     const fetchConnections = async () => {
       try {
-        // Fetch both sent and received requests that are accepted
-        const [sentRes, receivedRes] = await Promise.all([
+        // Fetch user profile and connections
+        const [userRes, sentRes, receivedRes] = await Promise.all([
+          fetch(`${import.meta.env.VITE_API_URL}/api/users/profile`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
           fetch(`${import.meta.env.VITE_API_URL}/api/requests/sent`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
@@ -26,6 +33,11 @@ function Connections() {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
+
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          setCurrentUser(userData);
+        }
 
         const sentData = sentRes.ok ? await sentRes.json() : { requests: [] };
         const receivedData = receivedRes.ok ? await receivedRes.json() : { requests: [] };
@@ -83,11 +95,16 @@ function Connections() {
 
   // Filter connections based on search term
   const filteredConnections = connections.filter(connection =>
-    connection.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    connection.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    connection.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    connection.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     connection.skills?.some(skill => skill.toLowerCase().includes(searchTerm.toLowerCase())) ||
     connection.goals?.some(goal => goal.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  const startConversation = (connection) => {
+    setSelectedConnection(connection);
+    setIsChatOpen(true);
+  };
 
   if (loading) {
     return (
@@ -273,7 +290,10 @@ function Connections() {
                         <span>Email</span>
                       </div>
                     </button>
-                    <button className="flex-1 bg-green-50 text-green-600 px-4 py-2 rounded-lg hover:bg-green-100 transition-all duration-200 text-sm font-medium">
+                    <button 
+                      onClick={() => startConversation(connection)}
+                      className="flex-1 bg-green-50 text-green-600 px-4 py-2 rounded-lg hover:bg-green-100 transition-all duration-200 text-sm font-medium"
+                    >
                       <div className="flex items-center justify-center space-x-2">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -288,6 +308,16 @@ function Connections() {
           </div>
         )}
       </div>
+
+      {/* Chat Panel */}
+      {isChatOpen && currentUser && (
+        <ChatPanel 
+          isOpen={isChatOpen} 
+          onClose={() => setIsChatOpen(false)}
+          currentUser={currentUser}
+          selectedConnection={selectedConnection}
+        />
+      )}
     </div>
   );
 }
